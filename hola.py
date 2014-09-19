@@ -48,19 +48,22 @@ def wall_follow(pub):
     
     #read in distances from robot to wall:
     for i in range(88,93): #average dist to the right of the robot
-        print type(lazer_measurements[i])
         if lazer_measurements[i]>0:
-            rt_side_dist=lazer_measurements[i]+rt_side_dist
-            print 'rt sd ', rt_side_dist
-#            
-#    for i in range(58,63): #average dist to 30 degrees above the beam of robot
-#        if msg.ranges[i]>0:
-#            d30ab+=msg.ranges[i]
-#                
-#    for i in range(118,123):
-#        if msg.ranges[i]>0:
-#            d30bb+=msg.ranges[i]
-#            
+            rt_side_dist+=lazer_measurements[i]
+        #print 'raw beam: ', lazer_measurements[i]
+    print 'rt sd ', rt_side_dist
+            
+    for i in range(58,63): #average dist to 30 degrees above the beam of robot
+        if lazer_measurements[i]>0:
+            d30ab+=lazer_measurements[i]
+    print '30 degrees above =: ', d30ab
+                
+    for i in range(118,123):
+        if lazer_measurements[i]>0:
+            d30bb+=lazer_measurements[i]
+        #print 'raw 30 degrees below: ', lazer_measurements[i]
+    print '30 degrees below: ',d30bb
+            
 #    if (rt_side_dist-set_pt)>dist_tol: #if the robot is too far from the wall:
 #        trn_rt_amt=trun_gain*(rt_side_dist-set_pt)
 #        pub.publish(neto_turn_right(trn_rt_amt))
