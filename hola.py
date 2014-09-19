@@ -5,8 +5,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist, Vector3
 from sensor_msgs.msg import LaserScan
 
-distance_to_wall = -1
-target = 1.0
+lazer_measurements=[]
 
 def neto_turn_right(rt_trn_amt):
     xspeed=0.3
@@ -31,6 +30,12 @@ def wall_follow(pub):
     """Directs the robot to find a wall and follow it from the laser scann data. 
     does this by trying to keep the average of the right or left laser scan in range."""
     print 'hla'
+    
+    global lazer_measurements
+    msg=lazer_measurements
+    
+    print 'type for the laser scan data', type(msg)
+    print 'msg 1 element: ', msg
     rt_side_dist=[]
     d30ab=[] #Distance to wall from 30 degrees Above Beam
     d30bb=[] #", but Below Beam
@@ -42,21 +47,21 @@ def wall_follow(pub):
     turn_gain=.9
     
     #read in distances from robot to wall:
-    for i in range(88,93): #average dist to the right of the robot
-        if msg.ranges[i]>0:
-            rt_side_dist+=msg.ranges[i]
-            
-    for i in range(58,63): #average dist to 30 degrees above the beam of robot
-        if msg.ranges[i]>0:
-            d30ab+=msg.ranges[i]
-                
-    for i in range(118,123):
-        if msg.ranges[i]>0:
-            d30bb+=msg.ranges[i]
-            
-    if (rt_side_dist-set_pt)>dist_tol: #if the robot is too far from the wall:
-        trn_rt_amt=trun_gain*(rt_side_dist-set_pt)
-        pub.publish(neto_turn_right(trn_rt_amt))
+#    for i in range(88,93): #average dist to the right of the robot
+#        if msg.ranges[i]>0:
+#            rt_side_dist+=msg.ranges[i]
+#            
+#    for i in range(58,63): #average dist to 30 degrees above the beam of robot
+#        if msg.ranges[i]>0:
+#            d30ab+=msg.ranges[i]
+#                
+#    for i in range(118,123):
+#        if msg.ranges[i]>0:
+#            d30bb+=msg.ranges[i]
+#            
+#    if (rt_side_dist-set_pt)>dist_tol: #if the robot is too far from the wall:
+#        trn_rt_amt=trun_gain*(rt_side_dist-set_pt)
+#        pub.publish(neto_turn_right(trn_rt_amt))
     
 def avoid_obstacles():
     """Keeps the robot from hitting objects when trying to move forward."""
@@ -84,17 +89,20 @@ def scan_received(msg):
    
 def read_in_laser(msg):
     """ Processes data from the laser scanner, msg is of type sensor_msgs/LaserScan """
-    print 'in read_in_laser'
+    #print 'in read_in_laser'
     valid_ranges = []
     for i in range(10):
         print 'laser reading ',msg.ranges[i]
         if msg.ranges[i] > 0 and msg.ranges[i] < 8:
             valid_ranges.append(msg.ranges[i])
-            print 'type is', type(msg.ranges[2])
     if len(valid_ranges) > 0:
         mean_distance = sum(valid_ranges)/float(len(valid_ranges))
+    global lazer_measurements
+    print 'about to write to the laser global!'
+    lazer_measurements=msg
+    print 'Written: ', lazer_measurements
         
-        print mean_distance
+        #print mean_distance
     
 def getch():
     """ Return the next character typed on the keyboard """
