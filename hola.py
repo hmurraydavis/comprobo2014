@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
+import time
 import rospy
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist, Vector3
 from sensor_msgs.msg import LaserScan
 
+#global lazer_measurements
 lazer_measurements=[]
 
 def neto_turn_right(rt_trn_amt):
@@ -31,11 +33,11 @@ def wall_follow(pub):
     does this by trying to keep the average of the right or left laser scan in range."""
     print 'hla'
     
-    global lazer_measurements
-    msg=lazer_measurements
-    
-    print 'type for the laser scan data', type(msg)
-    print 'msg 1 element: ', msg
+    while lazer_measurements==[]:
+        time.sleep(1)
+        
+    print 'type for the laser scan data', type(lazer_measurements)
+    print 'msg 1 element: ', lazer_measurements
     rt_side_dist=[]
     d30ab=[] #Distance to wall from 30 degrees Above Beam
     d30bb=[] #", but Below Beam
@@ -90,19 +92,23 @@ def scan_received(msg):
 def read_in_laser(msg):
     """ Processes data from the laser scanner, msg is of type sensor_msgs/LaserScan """
     #print 'in read_in_laser'
+    global lazer_measurements
     valid_ranges = []
+    
     for i in range(10):
-        print 'laser reading ',msg.ranges[i]
+        #print 'laser reading ',msg.ranges[i]
         if msg.ranges[i] > 0 and msg.ranges[i] < 8:
             valid_ranges.append(msg.ranges[i])
     if len(valid_ranges) > 0:
         mean_distance = sum(valid_ranges)/float(len(valid_ranges))
-    global lazer_measurements
-    print 'about to write to the laser global!'
-    lazer_measurements=msg
-    print 'Written: ', lazer_measurements
-        
-        #print mean_distance
+    #print 'ms rng', msg.ranges, '\n', '\n'
+    #print 'type msg rng: ', type(list(msg.ranges))
+    
+    lazer_measurements=list(msg.ranges) #TODO
+    #print 'lsr msg', lazer_measurements
+    
+    #lazer_measurements='hi'
+
     
 def getch():
     """ Return the next character typed on the keyboard """
