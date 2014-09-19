@@ -31,16 +31,14 @@ def neto_turn_left(lft_trn_amt):
 def wall_follow(pub):
     """Directs the robot to find a wall and follow it from the laser scann data. 
     does this by trying to keep the average of the right or left laser scan in range."""
-    print 'hla'
     
-    while lazer_measurements==[]:
-        time.sleep(1)
-        
-    print 'type for the laser scan data', type(lazer_measurements)
-    print 'msg 1 element: ', lazer_measurements
-    rt_side_dist=[]
-    d30ab=[] #Distance to wall from 30 degrees Above Beam
-    d30bb=[] #", but Below Beam
+    while lazer_measurements==[]: #wait for laser to start up:
+        time.sleep(.1)
+    
+    print 'laser start'
+    rt_side_dist=0.0
+    d30ab= 0.0#Distance to wall from 30 degrees Above Beam
+    d30bb=0.0 #", but Below Beam
     
     set_pt=.2 #distance from wall which the robot should keep
     dist_tol=.1 #tolerence of distance measurements
@@ -49,9 +47,11 @@ def wall_follow(pub):
     turn_gain=.9
     
     #read in distances from robot to wall:
-#    for i in range(88,93): #average dist to the right of the robot
-#        if msg.ranges[i]>0:
-#            rt_side_dist+=msg.ranges[i]
+    for i in range(88,93): #average dist to the right of the robot
+        print type(lazer_measurements[i])
+        if lazer_measurements[i]>0:
+            rt_side_dist=lazer_measurements[i]+rt_side_dist
+            print 'rt sd ', rt_side_dist
 #            
 #    for i in range(58,63): #average dist to 30 degrees above the beam of robot
 #        if msg.ranges[i]>0:
