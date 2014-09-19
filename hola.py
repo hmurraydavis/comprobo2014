@@ -48,8 +48,12 @@ def read_in_laser(msg):
     print 'in read_in_laser'
     valid_ranges = []
     for i in range(5):
+        print 'how are you'
         if msg.ranges[i] > 0 and msg.ranges[i] < 8:
             valid_ranges.append(msg.ranges[i])
+            print type(msg.ranges[2])
+        else:
+            print 'you done goofed'
     if len(valid_ranges) > 0:
         mean_distance = sum(valid_ranges)/float(len(valid_ranges))
         
