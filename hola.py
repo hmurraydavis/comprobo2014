@@ -9,21 +9,21 @@ from sensor_msgs.msg import LaserScan
 #global lazer_measurements
 lazer_measurements=[]
 
-def neto_turn_right(rt_trn_amt):
+def neto_turn_lft(lft_trn_amt):
     xspeed=0.3
     speed=Vector3(float(xspeed),0.0,0.0) 
-    angular=Vector3(float(rt_trn_amt),0.0,0.0)
+    angular=Vector3(float(lft_trn_amt),0.0,0.0)
     
     #Construct publish data:
     return Twist(speed,angular)
     
-def neto_turn_left(lft_trn_amt):
+def neto_turn_rt(rt_trn_amt):
     xspeed=0.3
     
     #make sure the robot will be turning left
-    -1*lft_trn_amt if lft_trn_amt >0 else lft_trn_amt 
+    -1*rt_trn_amt if rt_trn_amt >0 else rt_trn_amt 
     speed=Vector3(float(xspeed),0.0,0.0) 
-    angular=Vector3(float(lft_trn_amt),0.0,0.0)
+    angular=Vector3(float(rt_trn_amt),0.0,0.0)
     
     #Construct publish data:
     return Twist(speed,angular)
@@ -40,7 +40,7 @@ def wall_follow(pub):
     d30ab= 0.0#Distance to wall from 30 degrees Above Beam
     d30bb=0.0 #", but Below Beam
     
-    set_pt=.2 #distance from wall which the robot should keep
+    set_pt=1.5 #distance from wall which the robot should keep
     dist_tol=.1 #tolerence of distance measurements
     angle_tol=.1 #tolerence of the angle of the robot WRT the wall
     
@@ -63,10 +63,12 @@ def wall_follow(pub):
             d30bb+=lazer_measurements[i]
         #print 'raw 30 degrees below: ', lazer_measurements[i]
     print '30 degrees below: ',d30bb
-            
-#    if (rt_side_dist-set_pt)>dist_tol: #if the robot is too far from the wall:
-#        trn_rt_amt=trun_gain*(rt_side_dist-set_pt)
-#        pub.publish(neto_turn_right(trn_rt_amt))
+        
+    #print 'conditional val: ', rt_side_dist-set_pt
+    if (rt_side_dist-set_pt)>dist_tol: #if the robot is too far from the wall:
+        print 'robot too far from wall'
+        trn_rt_amt=turn_gain*(rt_side_dist-set_pt)
+        pub.publish(neto_turn_rt(trn_rt_amt))
     
 def avoid_obstacles():
     """Keeps the robot from hitting objects when trying to move forward."""
