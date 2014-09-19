@@ -8,21 +8,60 @@ from sensor_msgs.msg import LaserScan
 distance_to_wall = -1
 target = 1.0
 
+def neto_turn_right(rt_trn_amt):
+    xspeed=0.3
+    speed=Vector3(float(xspeed),0.0,0.0) 
+    angular=Vector3(float(rt_trn_amt),0.0,0.0)
+    
+    #Construct publish data:
+    return Twist(speed,angular)
+    
+def neto_turn_left(lft_trn_amt):
+    xspeed=0.3
+    
+    #make sure the robot will be turning left
+    -1*lft_trn_amt if lft_trn_amt >0 else lft_trn_amt 
+    speed=Vector3(float(xspeed),0.0,0.0) 
+    angular=Vector3(float(lft_trn_amt),0.0,0.0)
+    
+    #Construct publish data:
+    return Twist(speed,angular)
+    
 def wall_follow(pub):
     """Directs the robot to find a wall and follow it from the laser scann data. 
     does this by trying to keep the average of the right or left laser scan in range."""
     print 'hla'
-    for i in range(88,93):
-        break
-        #wallDist+=msg.ranges[i]
-        
-    print 'hi'
+    rt_side_dist=[]
+    d30ab=[] #Distance to wall from 30 degrees Above Beam
+    d30bb=[] #", but Below Beam
     
+    set_pt=.2 #distance from wall which the robot should keep
+    dist_tol=.1 #tolerence of distance measurements
+    angle_tol=.1 #tolerence of the angle of the robot WRT the wall
     
+    turn_gain=.9
+    
+    #read in distances from robot to wall:
+    for i in range(88,93): #average dist to the right of the robot
+        if msg.ranges[i]>0:
+            rt_side_dist+=msg.ranges[i]
+            
+    for i in range(58,63): #average dist to 30 degrees above the beam of robot
+        if msg.ranges[i]>0:
+            d30ab+=msg.ranges[i]
+                
+    for i in range(118,123):
+        if msg.ranges[i]>0:
+            d30bb+=msg.ranges[i]
+            
+    if (rt_side_dist-set_pt)>dist_tol: #if the robot is too far from the wall:
+        trn_rt_amt=trun_gain*(rt_side_dist-set_pt)
+        pub.publish(neto_turn_right(trn_rt_amt))
     
 def avoid_obstacles():
     """Keeps the robot from hitting objects when trying to move forward."""
-    
+        
+
 
 def scan_received(msg):
     print 'in scan received'
@@ -47,13 +86,11 @@ def read_in_laser(msg):
     """ Processes data from the laser scanner, msg is of type sensor_msgs/LaserScan """
     print 'in read_in_laser'
     valid_ranges = []
-    for i in range(5):
-        print 'how are you'
+    for i in range(10):
+        print 'laser reading ',msg.ranges[i]
         if msg.ranges[i] > 0 and msg.ranges[i] < 8:
             valid_ranges.append(msg.ranges[i])
-            print type(msg.ranges[2])
-        else:
-            print 'you done goofed'
+            print 'type is', type(msg.ranges[2])
     if len(valid_ranges) > 0:
         mean_distance = sum(valid_ranges)/float(len(valid_ranges))
         
