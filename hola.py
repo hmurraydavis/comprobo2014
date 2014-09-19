@@ -13,7 +13,8 @@ def wall_follow(pub):
     does this by trying to keep the average of the right or left laser scan in range."""
     print 'hla'
     for i in range(88,93):
-        wallDist+=msg.ranges[i]
+        break
+        #wallDist+=msg.ranges[i]
         
     print 'hi'
     
@@ -24,6 +25,7 @@ def avoid_obstacles():
     
 
 def scan_received(msg):
+    print 'in scan received'
     global distance_to_wall
     if len(msg.ranges) != 360:
         print 'unexpcted laser scan message'
@@ -43,6 +45,7 @@ def scan_received(msg):
    
 def read_in_laser(msg):
     """ Processes data from the laser scanner, msg is of type sensor_msgs/LaserScan """
+    print 'in read_in_laser'
     valid_ranges = []
     for i in range(5):
         if msg.ranges[i] > 0 and msg.ranges[i] < 8:
@@ -51,7 +54,6 @@ def read_in_laser(msg):
         mean_distance = sum(valid_ranges)/float(len(valid_ranges))
         
         print mean_distance
-    print "scan received"
     
 def getch():
     """ Return the next character typed on the keyboard """
@@ -81,6 +83,7 @@ def teleop(pub):
             break
         else :
             print 'unknown character'
+            continue
         pub.publish(msg)
         print"pub mesg",msg
         r.sleep()
@@ -90,7 +93,7 @@ if __name__ == '__main__':
         rospy.init_node('my_fsm', anonymous=True)
         pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
         sub = rospy.Subscriber('scan', LaserScan, read_in_laser)
-        state = "lazer"
+        state = "wall_follow"
 
         while not rospy.is_shutdown():
             if state == 'teleop':
@@ -99,7 +102,7 @@ if __name__ == '__main__':
                 state=wall_follow(pub)
             if state=='lazer':
                 print 'In lazer mode!'
-                state =read_in_laser(
+                #state =read_in_laser()
             #elif state == 'approach_wall':
             #    state = approach_wall(pub)
     except rospy.ROSInterruptException: pass
