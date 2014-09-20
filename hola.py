@@ -21,9 +21,8 @@ def neto_turn_lft(lft_trn_amt):
     
 def neto_turn_rt(rt_trn_amt):
     #make sure the robot will be turning left
-    -1*rt_trn_amt if rt_trn_amt >0 else rt_trn_amt 
     speed=Vector3(float(xspeed),0.0,0.0) 
-    angular=Vector3(0.0,0.0,float(rt_trn_amt))
+    angular=Vector3(0.0,0.0,-1.0*float(math.fabs(rt_trn_amt)))
     print 'rt_trn_amt ', rt_trn_amt
     #Construct publish data:
     return Twist(speed,angular)
@@ -47,10 +46,10 @@ def wall_follow(pub):
         
         set_pt=2.0 #distance from wall which the robot should keep
         dist_tol=0.4 #tolerence of distance measurements
-        angle_tol=.05 #tolerence of the angle of the robot WRT the wall
+        angle_tol=.1 #tolerence of the angle of the robot WRT the wall
         shitty_data_tol=.01
         
-        turn_gain=0.3
+        turn_gain=0.5
         angle_gain=0.2
         
         #read in distances from robot to wall:
@@ -72,12 +71,13 @@ def wall_follow(pub):
         #print '30 degrees below: ',d30bb
         
         #keep the robot the correct distance from the wall:    
-        if ((lft_side_dist-set_pt)>dist_tol) or (lft_side_dist<shitty_data_tol): #if the robot is too far from the wall:
-            print 'robot too far from wall'
+        if ((lft_side_dist-set_pt)>dist_tol) and (lft_side_dist>shitty_data_tol): #if the robot is too far from the wall:
+            #print '\n   lft side dist: ', lft_side_dist, '\n   st pt: ', set_pt
             trn_lft_amt=turn_gain*(lft_side_dist-set_pt)
+            print 'robot too far from wall', trn_lft_amt
             pub.publish(neto_turn_lft(trn_lft_amt))
             
-        elif (lft_side_dist-set_pt)<dist_tol: #if the robot is too close to the wall: TODO
+        elif ((lft_side_dist-set_pt)<dist_tol) and (lft_side_dist>shitty_data_tol): #if the robot is too close to the wall: TODO
             print 'robot too close to wall'
             trn_rt_amt=turn_gain*(set_pt-lft_side_dist)
             pub.publish(neto_turn_rt(trn_rt_amt))
@@ -85,16 +85,16 @@ def wall_follow(pub):
             pub.publish(neto_move_fwd())
         
         #keep robot parallel to wall:    
-        if math.fabs(lft_side_dist-set_pt)<.6: #only try to get parallel to the wall when close to it
-            if d30bb-d30ab<angle_tol: #case where it's heading toward the wall
-                pub.publish(neto_turn_rt(angle_gain*(d30bb-d30ab)))
-                print 'angled toward wall'
-            if d30ab-d30bb<angle_tol: #case where it's heading away from wall
-                pub.publish(neto_turn_lft(angle_gain*(d30ab-d30bb)))
-                print 'angled away from wall'
+#        if math.fabs(lft_side_dist-set_pt)<.6: #only try to get parallel to the wall when close to it
+#            if d30bb-d30ab<angle_tol: #case where it's heading toward the wall
+#                pub.publish(neto_turn_rt(angle_gain*(d30bb-d30ab)))
+#                print 'angled toward wall'
+#            if d30ab-d30bb<angle_tol: #case where it's heading away from wall
+#                pub.publish(neto_turn_lft(angle_gain*(d30ab-d30bb)))
+#                print 'angled away from wall'
         time.sleep(.07)
                 
-        
+       
         #yield control to master state keeper when needed:
 #        if sum(lazer_measurements[:5])/5<1:
 #            print 'ending motion'
@@ -185,7 +185,7 @@ if __name__ == '__main__':
         rospy.init_node('my_fsm', anonymous=True)
         pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
         sub = rospy.Subscriber('scan', LaserScan, read_in_laser)
-        state = "wall_follow"
+        state = "testing"
 
         while not rospy.is_shutdown():
             if state == 'teleop':
@@ -194,6 +194,9 @@ if __name__ == '__main__':
                 state=wall_follow(pub)
             if state=='obs_avoid':
                 state=obs_avoid(pub)
+            if state=='testing':
+                while not rospy.is_shutdown():
+                    pub.publish(neto_turn_rt(.4))
             #elif state == 'approach_wall':
             #    state = approach_wall(pub)
     except rospy.ROSInterruptException: pass
