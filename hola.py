@@ -3,6 +3,8 @@
 import time
 import math
 import rospy
+import random
+import operator
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist, Vector3
 from sensor_msgs.msg import LaserScan
@@ -15,7 +17,7 @@ def neto_turn_lft(lft_trn_amt):
     speed=Vector3(float(xspeed),0.0,0.0) 
     
     angular=Vector3(0.0,0.0,math.fabs(float(lft_trn_amt)))
-    print 'lft turn ', lft_trn_amt
+    #print 'lft turn ', lft_trn_amt
     #Construct publish data:
     return Twist(speed,angular)
     
@@ -23,7 +25,7 @@ def neto_turn_rt(rt_trn_amt):
     #make sure the robot will be turning left
     speed=Vector3(float(xspeed),0.0,0.0) 
     angular=Vector3(0.0,0.0,-1.0*float(math.fabs(rt_trn_amt)))
-    print 'rt_trn_amt ', rt_trn_amt
+    #print 'rt_trn_amt ', rt_trn_amt
     #Construct publish data:
     return Twist(speed,angular)
     
@@ -49,7 +51,7 @@ def wall_follow(pub):
         angle_tol=.1 #tolerence of the angle of the robot WRT the wall
         shitty_data_tol=.01
         
-        turn_gain=0.5
+        turn_gain=1.0
         angle_gain=0.2
         
         #read in distances from robot to wall:
@@ -74,39 +76,64 @@ def wall_follow(pub):
         if ((lft_side_dist-set_pt)>dist_tol) and (lft_side_dist>shitty_data_tol): #if the robot is too far from the wall:
             #print '\n   lft side dist: ', lft_side_dist, '\n   st pt: ', set_pt
             trn_lft_amt=turn_gain*(lft_side_dist-set_pt)
-            print 'robot too far from wall', trn_lft_amt
+            print 'FAR            ', 'LFT_DST: ', lft_side_dist
             pub.publish(neto_turn_lft(trn_lft_amt))
             
         elif ((lft_side_dist-set_pt)<dist_tol) and (lft_side_dist>shitty_data_tol): #if the robot is too close to the wall: TODO
-            print 'robot too close to wall'
+            print 'CLOSE          ', 'LFT_DST: ',lft_side_dist
             trn_rt_amt=turn_gain*(set_pt-lft_side_dist)
             pub.publish(neto_turn_rt(trn_rt_amt))
         else:
             pub.publish(neto_move_fwd())
         
         #keep robot parallel to wall:    
-#        if math.fabs(lft_side_dist-set_pt)<.6: #only try to get parallel to the wall when close to it
-#            if d30bb-d30ab<angle_tol: #case where it's heading toward the wall
-#                pub.publish(neto_turn_rt(angle_gain*(d30bb-d30ab)))
-#                print 'angled toward wall'
-#            if d30ab-d30bb<angle_tol: #case where it's heading away from wall
-#                pub.publish(neto_turn_lft(angle_gain*(d30ab-d30bb)))
-#                print 'angled away from wall'
+        if math.fabs(lft_side_dist-set_pt)<.6: #only try to get parallel to the wall when close to it
+            if d30bb-d30ab<angle_tol: #case where it's heading toward the wall
+                pub.publish(neto_turn_rt(angle_gain*(d30bb-d30ab)))
+                print 'ANGLED--TOWARD'
+            if d30ab-d30bb<angle_tol: #case where it's heading away from wall
+                pub.publish(neto_turn_lft(angle_gain*(d30ab-d30bb)))
+                print 'ANGLED--AWAY'
         time.sleep(.07)
                 
        
         #yield control to master state keeper when needed:
-#        if sum(lazer_measurements[:5])/5<1:
-#            print 'ending motion'
-#            pub.publish(Twist(Vector3(0.0,0.0,0.0),Vector3(0.0,0.0,0.0)))
-#            return 'teleop'
-#            
+        if sum(lazer_measurements[:5])/5<1:
+            print 'ending motion'
+            pub.publish(Twist(Vector3(0.0,0.0,0.0),Vector3(0.0,0.0,0.0)))
+            return 'teleop'
             
             
-def obs_avoid():
+            
+def obs_avoid(pub):
     """Keeps the robot from hitting objects when trying to move forward."""
+    while not rospy.is_shutdown():
+        while lazer_measurements==[]: #wait for laser to start up:
+            time.sleep(.1)
+            
+        obs_avd_gn=.5
+        dist_tol=1.4 #not the same as wall following so they can be tuned sepratly
+        trn_drc=0
         
-
+        lft_ft_scn=lazer_measurements[:5]
+        rt_ft_scn=lazer_measurements[355:360]
+        ft=map(operator.add,lft_ft_scn,rt_ft_scn)
+        ft=sum(ft)/(len(lft_ft_scn)+len(rt_ft_scn)) #Avg 10 degrees of scan data
+        
+        print 'ft is: ', ft
+        if (ft<dist_tol): #something in ft of robot
+            if trn_drc==0:
+                print 'dctn not set'
+                drc=random.randrange(100)%2
+                if drc==0:
+                    drc=-1
+        
+        if drc==1: #turn left to avoid obstacle
+            pub.publish(neto_turn_lft(obs_avd_gn*(dist_tol-ft)))
+        elif drc==-1: #turn right to avoid obstacle
+            pub.publish(neto_turn_rt(obs_avd_gn*(dist_tol-ft)))
+        elif drc==0:
+            pub.publish(neto_move_fwd)
 
 def scan_received(msg):
     print 'in scan received'
@@ -139,7 +166,7 @@ def read_in_laser(msg):
             valid_ranges.append(msg.ranges[i])
     if len(valid_ranges) > 0:
         mean_distance = sum(valid_ranges)/float(len(valid_ranges))
-    #print 'ms rng', msg.ranges, '\n', '\n'
+#    print 'ms rng', msg.ranges, '\n', '\n'
     #print 'type msg rng: ', type(list(msg.ranges))
     
     lazer_measurements=list(msg.ranges)
@@ -185,7 +212,7 @@ if __name__ == '__main__':
         rospy.init_node('my_fsm', anonymous=True)
         pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
         sub = rospy.Subscriber('scan', LaserScan, read_in_laser)
-        state = "testing"
+        state = "obs_avoid"
 
         while not rospy.is_shutdown():
             if state == 'teleop':
