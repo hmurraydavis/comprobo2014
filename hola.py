@@ -36,9 +36,8 @@ def neto_move_fwd(): #have the neeto move forward in a straight line:
     
 def objects_in_ft():
         lft_ft_scn=lazer_measurements[:10]
-        rt_ft_scn=lazer_measurements[350:360]
-        ft=map(operator.add,lft_ft_scn,rt_ft_scn)
-        return sum(ft)/(len(lft_ft_scn)+len(rt_ft_scn)) #Avg degrees of scan data
+        rt_ft_scn=lazer_measurements[-10:]
+        return (sum(lft_ft_scn)+sum(rt_ft_scn))/(len(lft_ft_scn)+len(rt_ft_scn)) #Avg degrees of scan data
     
 def wall_follow(pub):
     """Directs the robot follow a wall on the left side from the laser scann data. 
@@ -141,6 +140,16 @@ def obs_avoid(pub):
             pub.publish(neto_turn_rt(obs_avd_gn*(dist_tol-ft)))
         elif drc==0:
             pub.publish(neto_move_fwd)
+            
+def obs_avd_2(pub):
+    dist_tol=1.4
+    min_gap=30
+    
+    if (ft<dist_tol):
+    
+
+def straight_line_mode(pub):
+    pub.publish(neto_move_fwd)
 
 def scan_received(msg):
     print 'in scan received'
@@ -228,6 +237,8 @@ if __name__ == '__main__':
                 state=wall_follow(pub)
             if state=='obs_avoid':
                 state=obs_avoid(pub)
+            if state=='straight_line_mode':
+                state=straight_line_mode(pub)
             if state=='testing':
                 while not rospy.is_shutdown():
                     pub.publish(neto_turn_rt(.4))
