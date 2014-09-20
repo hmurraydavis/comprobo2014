@@ -4,7 +4,6 @@ import time
 import math
 import rospy
 import random
-import operator
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist, Vector3
 from sensor_msgs.msg import LaserScan
@@ -127,23 +126,20 @@ def wall_follow(pub):
         #keep robot parallel to wall:    
         if math.fabs(lft_side_dist-set_pt)<2.5: #only try to get parallel to the wall when close to it
             angle_robot=angle_robot_wrt_wall(d30ab,d30bb,angle_tol)
-            if 'toward' in angle_robot==True:
+            if 'toward' in angle_robot:
                 pub.publish(neto_turn_rt(angle_gain*angle_robot['toward']))
                 print 'ANGLED--TOWARD'
-            elif 'away' in angle_robot==True:
+            elif 'away' in angle_robot:
                 pub.publish(neto_turn_lft(angle_robot['away']))
                 print 'ANGLED--AWAY'
-            elif 'straight' in angle_robot==True:
+            elif 'straight' in angle_robot:
                 pub.publish(neto_move_fwd())
-            else:
-                print angle_robot
+
         time.sleep(.5)
                 
         #yield control to master state keeper when needed:
         if objects_in_ft()<.4: #switch to obs avoid mode when it would hit things
-            return 'obs_avoid'
-            
-            
+            return 'obs_avoid'         
             
 def obs_avoid(pub):
     """Keeps the robot from hitting objects when trying to move forward.
@@ -258,11 +254,8 @@ if __name__ == '__main__':
                 state=wall_follow(pub)
             if state=='obs_avoid':
                 state=obs_avoid(pub)
-            if state=='straight_line_mode':
-                state=straight_line_mode(pub)
             if state=='testing':
+                #put test code here:
                 break
-            #elif state == 'approach_wall':
-            #    state = approach_wall(pub)
     except rospy.ROSInterruptException: pass
 
