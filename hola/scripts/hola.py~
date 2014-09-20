@@ -139,9 +139,7 @@ def wall_follow(pub):
                 
         #yield control to master state keeper when needed:
         if objects_in_ft()<.4: #switch to obs avoid mode when it would hit things
-            return 'obs_avoid'
-            
-            
+            return 'obs_avoid'         
             
 def obs_avoid(pub):
     """Keeps the robot from hitting objects when trying to move forward.
@@ -179,7 +177,7 @@ def obs_avoid(pub):
    
 def read_in_laser(msg):
     """ Processes data from the laser scanner and makes it available to other functions
-    INPUT: The data from a single laset scan_received
+    INPUT: The data from a single laser scan_received
     OUTPUT: 
     **Writes laser scan data to the global variable: lazer_measurements"""
 
@@ -256,11 +254,8 @@ if __name__ == '__main__':
                 state=wall_follow(pub)
             if state=='obs_avoid':
                 state=obs_avoid(pub)
-            if state=='straight_line_mode':
-                state=straight_line_mode(pub)
             if state=='testing':
+                #put test code here:
                 break
-            #elif state == 'approach_wall':
-            #    state = approach_wall(pub)
     except rospy.ROSInterruptException: pass
 

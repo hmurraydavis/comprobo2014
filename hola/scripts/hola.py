@@ -177,7 +177,7 @@ def obs_avoid(pub):
    
 def read_in_laser(msg):
     """ Processes data from the laser scanner and makes it available to other functions
-    INPUT: The data from a single laset scan_received
+    INPUT: The data from a single laser scan_received
     OUTPUT: 
     **Writes laser scan data to the global variable: lazer_measurements"""
 
