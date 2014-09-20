@@ -43,6 +43,16 @@ def objects_in_ft():
             return 0
         else:
             return (sum(lft_ft_scn)+sum(rt_ft_scn))/qnty_nonzero_elements #Avg degrees of scan data
+
+def angle_robot_wrt_wall(d30ab,d30bb,angle_tol):
+        if (d30bb-d30ab)>angle_tol: #case where it's heading toward the wall
+            return {'toward':(d30bb-d30ab)}
+        elif (d30ab-d30bb)>angle_tol: #case where it's heading away from wall
+            return {'away':(d30ab-d30bb)}           
+        elif math.fabs(d30ab-d30bb) < angle_tol:
+            return {'straight':(d30ab-d30bb)}
+        else:
+            return {'error':0.0}
     
 def wall_follow(pub):
     """Directs the robot follow a wall on the left side from the laser scann data. 
@@ -53,12 +63,8 @@ def wall_follow(pub):
         while lazer_measurements==[]: #wait for laser to start up:
             time.sleep(.1)
         
-        lft_side_dist=0.0
-        d30ab= 0.0#Distance to wall from 30 degrees Above Beam
-        d30bb=0.0 #", but Below Beam
-        
-        set_pt=5.0 #distance from wall which the robot should keep
-        dist_tol=0.3 #tolerence of distance measurements
+        set_pt=2.0 #distance from wall which the robot should keep
+        dist_tol=0.6 #tolerence of distance measurements
         angle_tol=.8 #tolerence of the angle of the robot WRT the wall
         shitty_data_tol=.01
         
@@ -66,17 +72,23 @@ def wall_follow(pub):
         angle_gain=0.2
         
         #read in distances from robot to wall:
-        for i in range(88,93): #average dist to the right of the robot
-            if lazer_measurements[i]>0:
-                lft_side_dist+=lazer_measurements[i]
+        lft_side_dist=[x for x in lazer_measurements[88:93] if x != 0]
+        if len(lft_side_dist)>0:
+            lft_side_dist=sum(lft_side_dist)/len(lft_side_dist)
+        else: 
+            lft_side_dist=0
                 
-        for i in range(58,63): #average dist to 30 degrees above the beam of robot
-            if lazer_measurements[i]>0:
-                d30ab+=lazer_measurements[i]
-                    
-        for i in range(118,123):
-            if lazer_measurements[i]>0:
-                d30bb+=lazer_measurements[i]
+        d30ab=[x for x in lazer_measurements[58:63] if x != 0] #Distance to wall from 30 degrees Above Beam
+        if len(d30ab)>0:
+            d30ab=sum(d30ab)/len(d30ab)
+        else:
+            d30ab=0
+                        
+        d30bb=[x for x in lazer_measurements[118:123] if x != 0] # " " " ", but Below Beam
+        if len(d30bb)>0:
+            d30bb=sum(d30bb)/len(d30bb)
+        else:
+            d30bb=0
         
         #keep the robot the correct distance from the wall:    
         if ((lft_side_dist-set_pt)>dist_tol) and (lft_side_dist>shitty_data_tol): #if the robot is too far from the wall:
@@ -93,13 +105,18 @@ def wall_follow(pub):
         
         #keep robot parallel to wall:    
         if math.fabs(lft_side_dist-set_pt)<2.5: #only try to get parallel to the wall when close to it
-            if d30bb-d30ab<angle_tol: #case where it's heading toward the wall
-                pub.publish(neto_turn_rt(angle_gain*(d30bb-d30ab)))
+            angle_robot=angle_robot_wrt_wall(d30ab,d30bb,angle_tol)
+            if 'toward' in angle_robot==True:
+                pub.publish(neto_turn_rt(angle_gain*angle_robot['toward']))
                 print 'ANGLED--TOWARD'
-            if d30ab-d30bb<angle_tol: #case where it's heading away from wall
-                pub.publish(neto_turn_lft(angle_gain*(d30ab-d30bb)))
+            elif 'away' in angle_robot==True:
+                pub.publish(neto_turn_lft(angle_robot['away']))
                 print 'ANGLED--AWAY'
-        time.sleep(.07)
+            elif 'straight' in angle_robot==True:
+                pub.publish(neto_move_fwd())
+            else:
+                print angle_robot
+        time.sleep(.5)
                 
        
         #yield control to master state keeper when needed:
@@ -238,8 +255,7 @@ if __name__ == '__main__':
             if state=='straight_line_mode':
                 state=straight_line_mode(pub)
             if state=='testing':
-                while not rospy.is_shutdown():
-                    pub.publish(neto_turn_rt(.4))
+                break
             #elif state == 'approach_wall':
             #    state = approach_wall(pub)
     except rospy.ROSInterruptException: pass
