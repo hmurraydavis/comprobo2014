@@ -34,11 +34,9 @@ def wall_follow(pub):
     does this by trying to keep the average of the right or left laser scan in range."""
     
     while not rospy.is_shutdown():
-        print 'loop cycled!'
         while lazer_measurements==[]: #wait for laser to start up:
             time.sleep(.1)
         
-        print 'laser start'
         lft_side_dist=0.0
         d30ab= 0.0#Distance to wall from 30 degrees Above Beam
         d30bb=0.0 #", but Below Beam
@@ -46,9 +44,10 @@ def wall_follow(pub):
         set_pt=1.5 #distance from wall which the robot should keep
         dist_tol=.1 #tolerence of distance measurements
         angle_tol=.1 #tolerence of the angle of the robot WRT the wall
+        shitty_data_tol=.01
         
-        turn_gain=5.0
-        angle_gain=0.3
+        turn_gain=0.5
+        angle_gain=0.2
         
         #read in distances from robot to wall:
         for i in range(88,93): #average dist to the right of the robot
@@ -69,7 +68,7 @@ def wall_follow(pub):
         print '30 degrees below: ',d30bb
         
         #keep the robot the correct distance from the wall:    
-        if (lft_side_dist-set_pt)>dist_tol: #if the robot is too far from the wall:
+        if ((lft_side_dist-set_pt)>dist_tol) or (lft_side_dist<shitty_data_tol): #if the robot is too far from the wall:
             print 'robot too far from wall'
             trn_lft_amt=turn_gain*(lft_side_dist-set_pt)
             pub.publish(neto_turn_lft(trn_lft_amt))
@@ -83,8 +82,10 @@ def wall_follow(pub):
         if math.fabs(lft_side_dist-set_pt)<.6: #only try to get parallel to the wall when close to it
             if d30bb-d30ab<angle_tol: #case where it's heading toward the wall
                 pub.publish(neto_turn_rt(angle_gain*(d30bb-d30ab)))
+                print 'angled toward wall'
             if d30ab-d30bb<angle_tol: #case where it's heading away from wall
                 pub.publish(neto_turn_lft(angle_gain*(d30ab-d30bb)))
+                print 'angled away from wall'
         
         #yield control to master state keeper when needed:
 #        if sum(lazer_measurements[:5])/5<1:
