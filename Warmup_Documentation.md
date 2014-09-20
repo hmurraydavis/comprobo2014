@@ -40,7 +40,7 @@ behaviour2() {
   }
 }
 
-init(){
+init() {
   initiate ROS services
 
   state = "behavior1"
