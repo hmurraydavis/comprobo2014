@@ -25,7 +25,7 @@ behavior1() {
     act on behavior 1
 
     if (eventA == True) {
-      return 'behavior2'
+      return "behavior2"
     }
   }
 }
@@ -35,7 +35,7 @@ behaviour2() {
     act on behavior 2
 
     if (eventB == True) {
-      return 'behavior1'
+      return "behavior1"
     }
   }
 }
@@ -43,14 +43,14 @@ behaviour2() {
 init(){
   initiate ROS services
 
-  state = 'behavior1'
+  state = "behavior1"
 
   while (shutdown == False) {
-    if (state == 'behavior1') {
+    if (state == "behavior1") {
       state = behavior1()
     }
 
-    if (state == 'behavior2') {
+    if (state == "behavior2") {
       state = behavior2()
     }
   }
