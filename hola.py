@@ -41,12 +41,12 @@ def wall_follow(pub):
         d30ab= 0.0#Distance to wall from 30 degrees Above Beam
         d30bb=0.0 #", but Below Beam
         
-        set_pt=1.5 #distance from wall which the robot should keep
-        dist_tol=.1 #tolerence of distance measurements
-        angle_tol=.1 #tolerence of the angle of the robot WRT the wall
+        set_pt=6.0 #distance from wall which the robot should keep
+        dist_tol=1.3 #tolerence of distance measurements
+        angle_tol=.05 #tolerence of the angle of the robot WRT the wall
         shitty_data_tol=.01
         
-        turn_gain=0.5
+        turn_gain=0.3
         angle_gain=0.2
         
         #read in distances from robot to wall:
@@ -86,6 +86,8 @@ def wall_follow(pub):
             if d30ab-d30bb<angle_tol: #case where it's heading away from wall
                 pub.publish(neto_turn_lft(angle_gain*(d30ab-d30bb)))
                 print 'angled away from wall'
+        time.sleep(.05)
+                
         
         #yield control to master state keeper when needed:
 #        if sum(lazer_measurements[:5])/5<1:
