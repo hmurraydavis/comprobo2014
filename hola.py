@@ -9,24 +9,28 @@ from sensor_msgs.msg import LaserScan
 
 #global lazer_measurements
 lazer_measurements=[]
+xspeed=.1
 
 def neto_turn_lft(lft_trn_amt):
-    xspeed=0.1
     speed=Vector3(float(xspeed),0.0,0.0) 
-    angular=Vector3(0.0,0.0,float(lft_trn_amt))
     
+    angular=Vector3(0.0,0.0,math.fabs(float(lft_trn_amt)))
+    print 'lft turn ', lft_trn_amt
     #Construct publish data:
     return Twist(speed,angular)
     
 def neto_turn_rt(rt_trn_amt):
-    xspeed=0.1
-    
     #make sure the robot will be turning left
     -1*rt_trn_amt if rt_trn_amt >0 else rt_trn_amt 
     speed=Vector3(float(xspeed),0.0,0.0) 
     angular=Vector3(0.0,0.0,float(rt_trn_amt))
-    
+    print 'rt_trn_amt ', rt_trn_amt
     #Construct publish data:
+    return Twist(speed,angular)
+    
+def neto_move_fwd(): #have the neeto move forward in a straight line:
+    speed=Vector3(float(xspeed),0.0,0.0) 
+    angular=Vector3(0.0,0.0,0.0)
     return Twist(speed,angular)
     
 def wall_follow(pub):
@@ -41,8 +45,8 @@ def wall_follow(pub):
         d30ab= 0.0#Distance to wall from 30 degrees Above Beam
         d30bb=0.0 #", but Below Beam
         
-        set_pt=6.0 #distance from wall which the robot should keep
-        dist_tol=1.3 #tolerence of distance measurements
+        set_pt=2.0 #distance from wall which the robot should keep
+        dist_tol=0.4 #tolerence of distance measurements
         angle_tol=.05 #tolerence of the angle of the robot WRT the wall
         shitty_data_tol=.01
         
@@ -54,18 +58,18 @@ def wall_follow(pub):
             if lazer_measurements[i]>0:
                 lft_side_dist+=lazer_measurements[i]
             #print 'raw beam: ', lazer_measurements[i]
-        print 'lft sd ', lft_side_dist
+        #print 'lft sd ', lft_side_dist
                 
         for i in range(58,63): #average dist to 30 degrees above the beam of robot
             if lazer_measurements[i]>0:
                 d30ab+=lazer_measurements[i]
-        print '30 degrees above =: ', d30ab
+        #print '30 degrees above =: ', d30ab
                     
         for i in range(118,123):
             if lazer_measurements[i]>0:
                 d30bb+=lazer_measurements[i]
             #print 'raw 30 degrees below: ', lazer_measurements[i]
-        print '30 degrees below: ',d30bb
+        #print '30 degrees below: ',d30bb
         
         #keep the robot the correct distance from the wall:    
         if ((lft_side_dist-set_pt)>dist_tol) or (lft_side_dist<shitty_data_tol): #if the robot is too far from the wall:
@@ -73,10 +77,12 @@ def wall_follow(pub):
             trn_lft_amt=turn_gain*(lft_side_dist-set_pt)
             pub.publish(neto_turn_lft(trn_lft_amt))
             
-        elif (set_pt-lft_side_dist)>dist_tol: #if the robot is too close to the wall:
+        elif (lft_side_dist-set_pt)<dist_tol: #if the robot is too close to the wall: TODO
             print 'robot too close to wall'
             trn_rt_amt=turn_gain*(set_pt-lft_side_dist)
             pub.publish(neto_turn_rt(trn_rt_amt))
+        else:
+            pub.publish(neto_move_fwd())
         
         #keep robot parallel to wall:    
         if math.fabs(lft_side_dist-set_pt)<.6: #only try to get parallel to the wall when close to it
@@ -86,7 +92,7 @@ def wall_follow(pub):
             if d30ab-d30bb<angle_tol: #case where it's heading away from wall
                 pub.publish(neto_turn_lft(angle_gain*(d30ab-d30bb)))
                 print 'angled away from wall'
-        time.sleep(.05)
+        time.sleep(.07)
                 
         
         #yield control to master state keeper when needed:
