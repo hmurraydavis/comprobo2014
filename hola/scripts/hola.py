@@ -38,7 +38,6 @@ def objects_in_ft():
         lft_ft_scn = [x for x in lazer_measurements[:10] if x != 0]
         rt_ft_scn=lazer_measurements[-10:]
         rt_ft_scn=[x for x in lazer_measurements[-10:] if x != 0]
-        print 'rt_ft_scn: ', rt_ft_scn
         qnty_nonzero_elements=len(lft_ft_scn)+len(rt_ft_scn)
         if qnty_nonzero_elements==0:
             return 0
@@ -58,35 +57,29 @@ def wall_follow(pub):
         d30ab= 0.0#Distance to wall from 30 degrees Above Beam
         d30bb=0.0 #", but Below Beam
         
-        set_pt=2.0 #distance from wall which the robot should keep
-        dist_tol=0.4 #tolerence of distance measurements
-        angle_tol=.1 #tolerence of the angle of the robot WRT the wall
+        set_pt=5.0 #distance from wall which the robot should keep
+        dist_tol=0.3 #tolerence of distance measurements
+        angle_tol=.8 #tolerence of the angle of the robot WRT the wall
         shitty_data_tol=.01
         
-        turn_gain=1.0
+        turn_gain=0.4
         angle_gain=0.2
         
         #read in distances from robot to wall:
         for i in range(88,93): #average dist to the right of the robot
             if lazer_measurements[i]>0:
                 lft_side_dist+=lazer_measurements[i]
-            #print 'raw beam: ', lazer_measurements[i]
-        #print 'lft sd ', lft_side_dist
                 
         for i in range(58,63): #average dist to 30 degrees above the beam of robot
             if lazer_measurements[i]>0:
                 d30ab+=lazer_measurements[i]
-        #print '30 degrees above =: ', d30ab
                     
         for i in range(118,123):
             if lazer_measurements[i]>0:
                 d30bb+=lazer_measurements[i]
-            #print 'raw 30 degrees below: ', lazer_measurements[i]
-        #print '30 degrees below: ',d30bb
         
         #keep the robot the correct distance from the wall:    
         if ((lft_side_dist-set_pt)>dist_tol) and (lft_side_dist>shitty_data_tol): #if the robot is too far from the wall:
-            #print '\n   lft side dist: ', lft_side_dist, '\n   st pt: ', set_pt
             trn_lft_amt=turn_gain*(lft_side_dist-set_pt)
             print 'FAR            ', 'LFT_DST: ', lft_side_dist
             pub.publish(neto_turn_lft(trn_lft_amt))
@@ -99,7 +92,7 @@ def wall_follow(pub):
             pub.publish(neto_move_fwd())
         
         #keep robot parallel to wall:    
-        if math.fabs(lft_side_dist-set_pt)<.6: #only try to get parallel to the wall when close to it
+        if math.fabs(lft_side_dist-set_pt)<2.5: #only try to get parallel to the wall when close to it
             if d30bb-d30ab<angle_tol: #case where it's heading toward the wall
                 pub.publish(neto_turn_rt(angle_gain*(d30bb-d30ab)))
                 print 'ANGLED--TOWARD'
@@ -126,17 +119,13 @@ def obs_avoid(pub):
             
         obs_avd_gn=2.0
         dist_tol=1.1 #not the same as wall following so they can be tuned sepratly
-        
-        
         ft=objects_in_ft()
         
-        print 'ft is: ', ft
         if (ft<dist_tol) and (ft > 0): #something in ft of robot
             if trn_drc==0:
                 drc=random.randrange(100)%2
                 if drc==0:
-                    drc=-1
-                    
+                    drc=-1            
         else:
             return 'wall_follow'
         
@@ -147,7 +136,7 @@ def obs_avoid(pub):
         elif drc==0:
             pub.publish(neto_move_fwd)
         
-        time.sleep(.1)
+        time.sleep(.1) #keeps sensor noise from making it gitter and reduces terminal output to a useful level
             
 def obs_avd_2(pub):
     dist_tol=1.4
@@ -237,7 +226,7 @@ if __name__ == '__main__':
         rospy.init_node('my_fsm', anonymous=True)
         pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
         sub = rospy.Subscriber('scan', LaserScan, read_in_laser)
-        state = "obs_avoid"
+        state = "wall_follow"
 
         while not rospy.is_shutdown():
             if state == 'teleop':
