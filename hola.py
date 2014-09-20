@@ -13,7 +13,7 @@ lazer_measurements=[]
 def neto_turn_lft(lft_trn_amt):
     xspeed=0.1
     speed=Vector3(float(xspeed),0.0,0.0) 
-    angular=Vector3(float(lft_trn_amt),0.0,0.0)
+    angular=Vector3(0.0,0.0,float(lft_trn_amt))
     
     #Construct publish data:
     return Twist(speed,angular)
@@ -24,7 +24,7 @@ def neto_turn_rt(rt_trn_amt):
     #make sure the robot will be turning left
     -1*rt_trn_amt if rt_trn_amt >0 else rt_trn_amt 
     speed=Vector3(float(xspeed),0.0,0.0) 
-    angular=Vector3(float(rt_trn_amt),0.0,0.0)
+    angular=Vector3(0.0,0.0,float(rt_trn_amt))
     
     #Construct publish data:
     return Twist(speed,angular)
@@ -47,7 +47,8 @@ def wall_follow(pub):
         dist_tol=.1 #tolerence of distance measurements
         angle_tol=.1 #tolerence of the angle of the robot WRT the wall
         
-        turn_gain=.9
+        turn_gain=5.0
+        angle_gain=0.3
         
         #read in distances from robot to wall:
         for i in range(88,93): #average dist to the right of the robot
@@ -76,19 +77,21 @@ def wall_follow(pub):
         elif (set_pt-lft_side_dist)>dist_tol: #if the robot is too close to the wall:
             print 'robot too close to wall'
             trn_rt_amt=turn_gain*(set_pt-lft_side_dist)
-            pub.publish(neto_turn_right(trn_rt_amt))
+            pub.publish(neto_turn_rt(trn_rt_amt))
         
         #keep robot parallel to wall:    
         if math.fabs(lft_side_dist-set_pt)<.6: #only try to get parallel to the wall when close to it
             if d30bb-d30ab<angle_tol: #case where it's heading toward the wall
-                pub.publish(neto_turn_rt(.3*(d30bb-d30ab)))
+                pub.publish(neto_turn_rt(angle_gain*(d30bb-d30ab)))
             if d30ab-d30bb<angle_tol: #case where it's heading away from wall
-                pub.publish(neto_turn_lft(.3*(d30ab-d30bb)))
-        if getch()=='q':
-            print 'ending motion'
-            pub.publish(Twist(Vector3(0.0,0.0,0.0),Vector3(0.0,0.0,0.0)))
-            return 'teleop'
-            
+                pub.publish(neto_turn_lft(angle_gain*(d30ab-d30bb)))
+        
+        #yield control to master state keeper when needed:
+#        if sum(lazer_measurements[:5])/5<1:
+#            print 'ending motion'
+#            pub.publish(Twist(Vector3(0.0,0.0,0.0),Vector3(0.0,0.0,0.0)))
+#            return 'teleop'
+#            
             
             
 def obs_avoid():
