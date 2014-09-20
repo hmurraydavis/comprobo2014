@@ -6,7 +6,7 @@ This was written as a homework assignment for [Computational Robotics](https://s
 ##Finite State Controler##
 The finite state controler was implemented by initially setting the state of the robot's behavior shortly after ROS's services were iniated. From here, the behaviors passed code back to the main controler when defined events occured. This managed the act of switching the robot's state to the appropriate mode. In pseudo code:
 
-'''
+```
   behavor1() {
     while (shutdown==False){
       act on behavior 1
@@ -42,7 +42,7 @@ The finite state controler was implemented by initially setting the state of the
       }
     }
   }
-'''
+```
 
 From this, it is easy to see the flow of the code. Control of state initially relys on the init function; however, the indivigual behavors will be executed by the robot until the break conditions are met causing the behavor functions to exit. When this occurs, control of state regresses to the init function. 
 
