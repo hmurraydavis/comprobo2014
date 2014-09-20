@@ -35,9 +35,15 @@ def neto_move_fwd(): #have the neeto move forward in a straight line:
     return Twist(speed,angular)
     
 def objects_in_ft():
-        lft_ft_scn=lazer_measurements[:10]
+        lft_ft_scn = [x for x in lazer_measurements[:10] if x != 0]
         rt_ft_scn=lazer_measurements[-10:]
-        return (sum(lft_ft_scn)+sum(rt_ft_scn))/(len(lft_ft_scn)+len(rt_ft_scn)) #Avg degrees of scan data
+        rt_ft_scn=[x for x in lazer_measurements[-10:] if x != 0]
+        print 'rt_ft_scn: ', rt_ft_scn
+        qnty_nonzero_elements=len(lft_ft_scn)+len(rt_ft_scn)
+        if qnty_nonzero_elements==0:
+            return 0
+        else:
+            return (sum(lft_ft_scn)+sum(rt_ft_scn))/qnty_nonzero_elements #Avg degrees of scan data
     
 def wall_follow(pub):
     """Directs the robot follow a wall on the left side from the laser scann data. 
@@ -118,14 +124,14 @@ def obs_avoid(pub):
         while lazer_measurements==[]: #wait for laser to start up:
             time.sleep(.1)
             
-        obs_avd_gn=.5
-        dist_tol=1.4 #not the same as wall following so they can be tuned sepratly
+        obs_avd_gn=2.0
+        dist_tol=1.1 #not the same as wall following so they can be tuned sepratly
         
         
         ft=objects_in_ft()
         
         print 'ft is: ', ft
-        if (ft<dist_tol): #something in ft of robot
+        if (ft<dist_tol) and (ft > 0): #something in ft of robot
             if trn_drc==0:
                 drc=random.randrange(100)%2
                 if drc==0:
@@ -135,17 +141,20 @@ def obs_avoid(pub):
             return 'wall_follow'
         
         if drc==1: #turn left to avoid obstacle
-            pub.publish(neto_turn_lft(obs_avd_gn*(dist_tol-ft)))
-        elif drc==-1: #turn right to avoid obstacle
             pub.publish(neto_turn_rt(obs_avd_gn*(dist_tol-ft)))
+        elif drc==-1: #turn right to avoid obstacle
+            pub.publish(neto_turn_rt(obs_avd_gn*(dist_tol-ft))) #TODO make it turn rt too
         elif drc==0:
             pub.publish(neto_move_fwd)
+        
+        time.sleep(.1)
             
 def obs_avd_2(pub):
     dist_tol=1.4
     min_gap=30
     
     if (ft<dist_tol):
+        pass
     
 
 def straight_line_mode(pub):
