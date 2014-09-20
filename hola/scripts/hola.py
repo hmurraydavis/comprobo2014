@@ -14,6 +14,9 @@ lazer_measurements=[]
 xspeed=.1
 
 def neto_turn_lft(lft_trn_amt):
+    '''Constructs an input that will make the robot turn left.
+    INPUT: amout for robot to turn left
+    OUTPUT: Twist data structure to make a robot move forward and turn left '''
     speed=Vector3(float(xspeed),0.0,0.0) 
     
     angular=Vector3(0.0,0.0,math.fabs(float(lft_trn_amt)))
@@ -22,6 +25,9 @@ def neto_turn_lft(lft_trn_amt):
     return Twist(speed,angular)
     
 def neto_turn_rt(rt_trn_amt):
+    '''Constructs an input that will make the robot turn right.
+    INPUT: amout for robot to turn right
+    OUTPUT: Twist data structure to make a robot move forward and turn right '''
     #make sure the robot will be turning left
     speed=Vector3(float(xspeed),0.0,0.0) 
     angular=Vector3(0.0,0.0,-1.0*float(math.fabs(rt_trn_amt)))
@@ -30,32 +36,47 @@ def neto_turn_rt(rt_trn_amt):
     return Twist(speed,angular)
     
 def neto_move_fwd(): #have the neeto move forward in a straight line:
+    '''Constructs an input that will make the robot move forward at a set speed.
+    INPUT: void
+    OUTPUT: Twist data structure to make a robot move forward '''
     speed=Vector3(float(xspeed),0.0,0.0) 
     angular=Vector3(0.0,0.0,0.0)
     return Twist(speed,angular)
     
 def objects_in_ft():
-        lft_ft_scn = [x for x in lazer_measurements[:10] if x != 0]
-        rt_ft_scn=lazer_measurements[-10:]
-        rt_ft_scn=[x for x in lazer_measurements[-10:] if x != 0]
-        qnty_nonzero_elements=len(lft_ft_scn)+len(rt_ft_scn)
-        if qnty_nonzero_elements==0:
-            return 0
-        else:
-            return (sum(lft_ft_scn)+sum(rt_ft_scn))/qnty_nonzero_elements #Avg degrees of scan data
+    '''Checks to see if any objects are within a 20 degree radial propigation in
+    front of the robot. If there are, it averages the nonzero values
+    INPUT: void
+    OUTPUT: float of the average distance to objects in front of the robot '''
+    lft_ft_scn = [x for x in lazer_measurements[:10] if x != 0]
+    rt_ft_scn=lazer_measurements[-10:]
+    rt_ft_scn=[x for x in lazer_measurements[-10:] if x != 0]
+    qnty_nonzero_elements=len(lft_ft_scn)+len(rt_ft_scn)
+    if qnty_nonzero_elements==0:
+        return 0
+    else:
+        return (sum(lft_ft_scn)+sum(rt_ft_scn))/qnty_nonzero_elements #Avg degrees of scan data
 
 def angle_robot_wrt_wall(d30ab,d30bb,angle_tol):
-        if (d30bb-d30ab)>angle_tol: #case where it's heading toward the wall
-            return {'toward':(d30bb-d30ab)}
-        elif (d30ab-d30bb)>angle_tol: #case where it's heading away from wall
-            return {'away':(d30ab-d30bb)}           
-        elif math.fabs(d30ab-d30bb) < angle_tol:
-            return {'straight':(d30ab-d30bb)}
-        else:
-            return {'error':0.0}
+    '''Checks the robots angle with respect to a wall. 
+    INPUT: Distance to objects 30 degrees in front of off the robot's left side (60 degres from zero)
+           Distance to objects 30 degrees bedhind off the robot's left side (120 degrees from zero)
+           Angle tolerence for thresholding the justification of angle with respect to the wall]
+    OUTPUT: Dictionary of form: {'angle_robot_wrt_wall': difference in the angled distances}
+            if an unexpected error happens, it returns: {'error':0.0} but does not raise an error'''
+    if (d30bb-d30ab)>angle_tol: #case where it's heading toward the wall
+        return {'toward':(d30bb-d30ab)}
+    elif (d30ab-d30bb)>angle_tol: #case where it's heading away from wall
+        return {'away':(d30ab-d30bb)}           
+    elif math.fabs(d30ab-d30bb) < angle_tol:
+        return {'straight':(d30ab-d30bb)}
+    else:
+        return {'error':0.0}
     
 def wall_follow(pub):
     """Directs the robot follow a wall on the left side from the laser scann data. 
+    INPUT: node to which the robot should publish motion instructions
+    OUTPUT: String of next state the robot should take
     """
     
     print 'wall follow'
@@ -96,7 +117,7 @@ def wall_follow(pub):
             print 'FAR            ', 'LFT_DST: ', lft_side_dist
             pub.publish(neto_turn_lft(trn_lft_amt))
             
-        elif ((lft_side_dist-set_pt)<dist_tol) and (lft_side_dist>shitty_data_tol): #if the robot is too close to the wall: TODO
+        elif ((lft_side_dist-set_pt)<dist_tol) and (lft_side_dist>shitty_data_tol): #if the robot is too close to the wall
             print 'CLOSE          ', 'LFT_DST: ',lft_side_dist
             trn_rt_amt=turn_gain*(set_pt-lft_side_dist)
             pub.publish(neto_turn_rt(trn_rt_amt))
@@ -118,7 +139,6 @@ def wall_follow(pub):
                 print angle_robot
         time.sleep(.5)
                 
-       
         #yield control to master state keeper when needed:
         if objects_in_ft()<.4: #switch to obs avoid mode when it would hit things
             return 'obs_avoid'
@@ -126,7 +146,10 @@ def wall_follow(pub):
             
             
 def obs_avoid(pub):
-    """Keeps the robot from hitting objects when trying to move forward."""
+    """Keeps the robot from hitting objects when trying to move forward.
+    INPUT: node to which the robot should publish motion instructions
+    OUTPUT: String of next state the robot should take
+    """
     print 'obs avoid'
     trn_drc=0
     
@@ -146,48 +169,22 @@ def obs_avoid(pub):
         else:
             return 'wall_follow'
         
+        #this is from the turn direction was random
         if drc==1: #turn left to avoid obstacle
             pub.publish(neto_turn_rt(obs_avd_gn*(dist_tol-ft)))
         elif drc==-1: #turn right to avoid obstacle
-            pub.publish(neto_turn_rt(obs_avd_gn*(dist_tol-ft))) #TODO make it turn rt too
+            pub.publish(neto_turn_rt(obs_avd_gn*(dist_tol-ft)))
         elif drc==0:
             pub.publish(neto_move_fwd)
         
         time.sleep(.1) #keeps sensor noise from making it gitter and reduces terminal output to a useful level
-            
-def obs_avd_2(pub):
-    dist_tol=1.4
-    min_gap=30
-    
-    if (ft<dist_tol):
-        pass
-    
-
-def straight_line_mode(pub):
-    pub.publish(neto_move_fwd)
-
-def scan_received(msg):
-    print 'in scan received'
-    global distance_to_wall
-    if len(msg.ranges) != 360:
-        print 'unexpcted laser scan message'
-        return
-
-    valid_msgs = 0.0
-    sum_valid = 0.0
-    for i in range(5):
-        if msg.ranges[i] > 0.1 and msg.ranges[i] < 7.0:
-            valid_msgs += 1
-            sum_valid += msg.ranges[i]
-            print msg.ranges[i]
-    if valid_msgs > 0:
-        distance_tg_wall = sum_valid / valid_msgs
-    else:
-        distance_to_wall = -1
    
 def read_in_laser(msg):
-    """ Processes data from the laser scanner, msg is of type sensor_msgs/LaserScan """
-    #print 'in read_in_laser'
+    """ Processes data from the laser scanner and makes it available to other functions
+    INPUT: The data from a single laset scan_received
+    OUTPUT: 
+    **Writes laser scan data to the global variable: lazer_measurements"""
+
     global lazer_measurements
     valid_ranges = []
     
@@ -197,14 +194,14 @@ def read_in_laser(msg):
             valid_ranges.append(msg.ranges[i])
     if len(valid_ranges) > 0:
         mean_distance = sum(valid_ranges)/float(len(valid_ranges))
-#    print 'ms rng', msg.ranges, '\n', '\n'
-    #print 'type msg rng: ', type(list(msg.ranges))
     
     lazer_measurements=list(msg.ranges)
 
-    
 def getch():
-    """ Return the next character typed on the keyboard """
+    """ Return the next character typed on the keyboard 
+    INPUT: void
+    OUTPUT: String of he first typed key character
+    **Waits until a character is received to exit and return"""
     import sys, tty, termios
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
@@ -216,6 +213,11 @@ def getch():
     return ch
     
 def teleop(pub):
+    ''' Provides functionality for a teleoperated mode for testing purposes. 
+    While there is no way to get into this mode under normal operation, it can 
+    be set initially in the name=='__main__' function.
+    INPUT: The node to which to publish movement messages 
+    OUTPUT: none'''
     r = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
         ch = getch()
@@ -239,6 +241,10 @@ def teleop(pub):
         r.sleep()
         
 if __name__ == '__main__':
+    '''Initializes ROS processes and controls the state of the robot once 
+    indivigual behaviors yield controls
+    INPUT: none
+    OUTPUT: none'''
     try:
         rospy.init_node('my_fsm', anonymous=True)
         pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
