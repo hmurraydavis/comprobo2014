@@ -34,10 +34,17 @@ def neto_move_fwd(): #have the neeto move forward in a straight line:
     angular=Vector3(0.0,0.0,0.0)
     return Twist(speed,angular)
     
-def wall_follow(pub):
-    """Directs the robot to find a wall and follow it from the laser scann data. 
-    does this by trying to keep the average of the right or left laser scan in range."""
+def objects_in_ft():
+        lft_ft_scn=lazer_measurements[:10]
+        rt_ft_scn=lazer_measurements[350:360]
+        ft=map(operator.add,lft_ft_scn,rt_ft_scn)
+        return sum(ft)/(len(lft_ft_scn)+len(rt_ft_scn)) #Avg degrees of scan data
     
+def wall_follow(pub):
+    """Directs the robot follow a wall on the left side from the laser scann data. 
+    """
+    
+    print 'wall follow'
     while not rospy.is_shutdown():
         while lazer_measurements==[]: #wait for laser to start up:
             time.sleep(.1)
@@ -98,35 +105,35 @@ def wall_follow(pub):
                 
        
         #yield control to master state keeper when needed:
-        if sum(lazer_measurements[:5])/5<1:
-            print 'ending motion'
-            pub.publish(Twist(Vector3(0.0,0.0,0.0),Vector3(0.0,0.0,0.0)))
-            return 'teleop'
+        if objects_in_ft()<.4: #switch to obs avoid mode when it would hit things
+            return 'obs_avoid'
             
             
             
 def obs_avoid(pub):
     """Keeps the robot from hitting objects when trying to move forward."""
+    print 'obs avoid'
+    trn_drc=0
+    
     while not rospy.is_shutdown():
         while lazer_measurements==[]: #wait for laser to start up:
             time.sleep(.1)
             
         obs_avd_gn=.5
         dist_tol=1.4 #not the same as wall following so they can be tuned sepratly
-        trn_drc=0
         
-        lft_ft_scn=lazer_measurements[:5]
-        rt_ft_scn=lazer_measurements[355:360]
-        ft=map(operator.add,lft_ft_scn,rt_ft_scn)
-        ft=sum(ft)/(len(lft_ft_scn)+len(rt_ft_scn)) #Avg 10 degrees of scan data
+        
+        ft=objects_in_ft()
         
         print 'ft is: ', ft
         if (ft<dist_tol): #something in ft of robot
             if trn_drc==0:
-                print 'dctn not set'
                 drc=random.randrange(100)%2
                 if drc==0:
                     drc=-1
+                    
+        else:
+            return 'wall_follow'
         
         if drc==1: #turn left to avoid obstacle
             pub.publish(neto_turn_lft(obs_avd_gn*(dist_tol-ft)))
